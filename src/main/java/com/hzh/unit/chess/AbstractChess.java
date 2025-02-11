@@ -30,7 +30,7 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
 
     @Override
     public int value() {
-        return this.getChessType().getValue();
+        return this.getChessType().getValue() * (maximizer ? 1 : -1);
     }
 
     @Override
@@ -84,17 +84,6 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
         this.getPoint().setX(x);
         this.getPoint().setY(y);
         return willBeEaten;
-    }
-
-    public void tracebackMove(int originalX, int originalY) {
-        GameBoard gameBoard = GameBoard.INSTANCE;
-
-        // 更新棋盘
-        gameBoard.applyMove(this.getPoint(), new Point(originalX, originalY));
-
-        // 更新棋子位置
-        this.getPoint().setX(originalX);
-        this.getPoint().setY(originalY);
     }
 
     @Override

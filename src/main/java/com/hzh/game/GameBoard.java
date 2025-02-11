@@ -1,6 +1,5 @@
 package com.hzh.game;
 
-import com.hzh.unit.*;
 import com.hzh.unit.chess.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +7,7 @@ import lombok.Setter;
 import java.util.*;
 
 public class GameBoard {
-    private Comparator<Chess> chessComparator;
+    private final Comparator<Chess> chessComparator;
     private boolean isMyTurn = true;
     public static final int BOARD_WIDTH = 7;
     public static final int BOARD_HEIGHT = 9;
@@ -17,7 +16,7 @@ public class GameBoard {
     @Setter
     private int evaluation = 0;
 
-    private int[][] chess = {
+    private final int[][] chess = {
             {-700, 0, 0, 0, 0, 0, -600},
             {0, -300, 0, 0, 0, -200, 0},
             {-100, 0, -500, 0, -400, 0, -800},
@@ -29,7 +28,7 @@ public class GameBoard {
             {600, 0, 0, 0, 0, 0, 700}
     };
 
-    private int[][] river = {
+    private final int[][] river = {
             {0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
@@ -41,7 +40,7 @@ public class GameBoard {
             {0, 0, 0, 0, 0, 0, 0}
     };
 
-    private int[][] traps = {
+    private final int[][] traps = {
             {0, 0, 1, 0, 1, 0, 0},
             {0, 0, 0, 1, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
@@ -53,7 +52,7 @@ public class GameBoard {
             {0, 0, 1, 0, 1, 0, 0}
     };
 
-    private int[][] caves = {
+    private final int[][] caves = {
             {0, 0, 0, 1, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
@@ -94,7 +93,7 @@ public class GameBoard {
     }
 
     public boolean isTrap(int x, int y, boolean maximizer) {
-        boolean xInPlace = maximizer ? x >= BOARD_HEIGHT-2: x < 2;
+        boolean xInPlace = maximizer ? x >= BOARD_HEIGHT - 2 : x < 2;
         return xInPlace && traps[x][y] == 1;
     }
 
@@ -104,7 +103,7 @@ public class GameBoard {
     }
 
     public boolean hasChess(int x, int y) {
-        return chess[x][y]!=0;
+        return chess[x][y] != 0;
     }
 
     public boolean hasChess(int x, int y, boolean maximizer) {
@@ -112,16 +111,17 @@ public class GameBoard {
     }
 
     public boolean isChess(int x, int y) {
-        return traps[x][y]==0 && caves[x][y]==0 && river[x][y]==0 && chess[x][y] != 0;
+        return traps[x][y] == 0 && caves[x][y] == 0 && river[x][y] == 0 && chess[x][y] != 0;
     }
 
     public boolean isChess(int x, int y, boolean maximizer) {
-        return traps[x][y]==0 && caves[x][y]==0 && river[x][y]==0 && (maximizer ? chess[x][y] > 0 : chess[x][y] < 0);
+        return traps[x][y] == 0 && caves[x][y] == 0 && river[x][y] == 0 && (maximizer ? chess[x][y] > 0 : chess[x][y] < 0);
     }
 
     public Chess getChess(int x, int y) {
         return chessMap.get(chess[x][y]);
     }
+
     public Chess getChess(ChessType chessType, boolean maximizer) {
         return chessMap.get(chessType.getValue() * (maximizer ? 1 : -1));
     }
@@ -137,19 +137,22 @@ public class GameBoard {
     public int chessCompare(Chess chess1, Chess chess2) {
         return chessComparator.compare(chess1, chess2);
     }
-    public void applyMove(Point src, Point dst){
+
+    public void applyMove(Point src, Point dst) {
         chess[dst.getX()][dst.getY()] = chess[src.getX()][src.getY()];
         chess[src.getX()][src.getY()] = 0;
     }
-    public void recoverChess(Chess c){
-        if(c==null)return;
+
+    public void recoverChess(Chess c) {
+        if (c == null) return;
         chess[c.getX()][c.getY()] = c.value();
     }
+
     public int evaluate() {
         int score = 0;
-        for(int i=0; i<BOARD_HEIGHT; i++){
-            for(int j=0; j<BOARD_WIDTH; j++){
-                if(hasChess(i,j)){
+        for (int i = 0; i < BOARD_HEIGHT; i++) {
+            for (int j = 0; j < BOARD_WIDTH; j++) {
+                if (hasChess(i, j)) {
                     Chess chess = getChess(i, j);
                     score += this.chess[i][j];
                     if (chess.getChessType().equals(ChessType.RAT)) {
@@ -163,11 +166,11 @@ public class GameBoard {
 
 
     public boolean win(boolean maximizer) {
-        return maximizer ? chess[0][3] !=0 : chess[8][3] !=0;
+        return maximizer ? chess[0][3] != 0 : chess[8][3] != 0;
     }
 
     public boolean lose(boolean maximizer) {
-        return maximizer ? chess[8][3] !=0 : chess[0][3] !=0;
+        return maximizer ? chess[8][3] != 0 : chess[0][3] != 0;
     }
 
     public boolean gameOver() {
@@ -177,21 +180,21 @@ public class GameBoard {
     public void printBoard() {
         for (int i = 0; i < BOARD_HEIGHT; i++) {
             for (int j = 0; j < BOARD_WIDTH; j++) {
-                String name="";
-                String color="\033[0m";
-                if(hasChess(i,j)){
+                String name = "";
+                String color = "\033[0m";
+                if (hasChess(i, j)) {
                     Chess chess = getChess(i, j);
                     color = chess.isMaximizer() ? "\033[34m" : "\033[31m";
                     name = chess.getChessType().getName();
-                }else if(isRiver(i,j)){
+                } else if (isRiver(i, j)) {
                     name = "河";
-                }else if(isCave(i,j)){
-                    color = i==0 ? "\033[31m" : "\033[34m";
+                } else if (isCave(i, j)) {
+                    color = i == 0 ? "\033[31m" : "\033[34m";
                     name = "穴";
-                }else if(isTrap(i,j)){
-                    color = i<BOARD_HEIGHT/2 ? "\033[31m" : "\033[34m";
+                } else if (isTrap(i, j)) {
+                    color = i < BOARD_HEIGHT / 2 ? "\033[31m" : "\033[34m";
                     name = "陷";
-                }else if(isBlank(i,j)){
+                } else if (isBlank(i, j)) {
                     name = "地";
                 }
                 System.out.print(color + name + "\t");
@@ -205,11 +208,11 @@ public class GameBoard {
     }
 
     public void nextTurn() {
-//        if (!isMyTurn) {
-//            GameContextHolder.beastChessAI.move();
-//            isMyTurn = true;
-//            return;
-//        }
+        if (!isMyTurn) {
+            GameContextHolder.beastChessAI.move();
+            isMyTurn = true;
+            return;
+        }
         Scanner scanner = new Scanner(System.in);
         System.out.println("1:红方");
         System.out.println("2:蓝方");
@@ -221,8 +224,8 @@ public class GameBoard {
         }
         System.out.print("请选择棋子：");
         int chessType = scanner.nextInt();
-        Chess chess = getChess(ChessType.values()[chessType-1], isMaximizer);
-        if(chessDied(chess)){
+        Chess chess = getChess(ChessType.values()[chessType - 1], isMaximizer);
+        if (chessDied(chess)) {
             System.out.println("该棋子已被吃掉");
             return;
         }
@@ -277,13 +280,10 @@ public class GameBoard {
         chessList.add(new Elephant(6, 0, true));
 
         chessList.forEach(chess -> {
-            if (chess.isMaximizer()) {
-                chessMap.put(chess.value(), chess);
-            } else {
-                chessMap.put(-chess.value(), chess);
-            }
+            chessMap.put(chess.value(), chess);
         });
     }
+
     private Comparator<Chess> chessComparator() {
         return (o1, o2) -> {
             if (o1.isMaximizer() == o2.isMaximizer()) {
