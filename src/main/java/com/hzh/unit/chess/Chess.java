@@ -9,11 +9,13 @@ import java.util.Iterator;
 import java.util.List;
 
 public interface Chess extends Unit {
+    int getX();
+    int getY();
     int value();
     boolean isMaximizer();
     ChessType getChessType();
     MovingStrategy getMovingStrategy();
     boolean isInDanger();
     List<Point> nextAvailableMoves();
-    void move(int x, int y, Iterator<Chess> iterator);
+    Chess move(int x, int y);
 }

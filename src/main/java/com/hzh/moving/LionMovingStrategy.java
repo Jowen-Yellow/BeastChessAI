@@ -1,90 +1,58 @@
 package com.hzh.moving;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.GameContextHolder;
 import com.hzh.game.Point;
-import com.hzh.unit.Cave;
-import com.hzh.unit.Unit;
-import com.hzh.unit.UnitType;
 import com.hzh.unit.chess.Chess;
-
-import java.util.Comparator;
-import java.util.Set;
+import com.hzh.unit.chess.ChessType;
 
 public class LionMovingStrategy implements MovingStrategy {
 
     @Override
     public boolean canMove(Chess chess, int x, int y) {
-        GameBoard gameBoard = GameContextHolder.getGameBoard();
-        Comparator<Chess> chessComparator = gameBoard.chessComparator();
-        Set<Unit> units = gameBoard.findUnitAtPoint(x, y);
-        // 是空地，可以移动
-        if (units == null) {
-            return true;
-        }
+        GameBoard gameBoard = GameBoard.INSTANCE;
 
         /*
-         不叠子的情况，陷阱，棋子，洞穴，以下情况可以移动
-         1. 没跨河，下一个地点不是棋子，且不是己方洞穴
-         2. 没跨河，下一个地点是棋子，并且比自己小
+         可以移动的情况
+         1. 没跨河，下一个地点是空地、陷阱、敌方洞穴
+         2. 没跨河，下一个地点包含敌方棋子，且比自己小
          3. 跨河，中间没有棋子（老鼠），下一个地点同上述规则
          */
-        Point point = chess.getPoint();
-        boolean crossRiver = Math.abs(point.getX() - x) + Math.abs(point.getY() - y) > 1;
-        if (units.size() == 1) {
-            Unit unit = units.iterator().next();
-            if (!crossRiver) {
-                return singleUnitStrategy(unit, chess, chessComparator);
-            }
+        boolean crossRiver = Math.abs(chess.getX() - x) + Math.abs(chess.getY() - y) > 1;
+        boolean ratInRiver = ratInRiver(gameBoard, chess.getPoint(), new Point(x, y));
+        boolean noCrossRiverMove = noCrossRiverMove(gameBoard, chess, x, y);
 
-            if (ratInRiver(gameBoard, point, new Point(x, y))) {
-                return false;
-            }
-            return singleUnitStrategy(unit, chess, chessComparator);
-        }
-
-        /*
-         叠子的情况，陷阱+棋子(岸上)，以下情况可以移动
-         1. 没跨河，可以移动
-         1. 跨河且河中没有棋子
-         */
-
-        return !crossRiver || !ratInRiver(gameBoard, point, new Point(x, y));
+        return crossRiver? (!ratInRiver && noCrossRiverMove) : noCrossRiverMove;
     }
 
     /*
-     1. 下一个地点不是棋子
-     2. 下一个地点是棋子，并且比自己小
+     1. 下一个地点是空地、陷阱、敌方洞穴
+     2. 下一个地点包含敌方棋子，且比自己小
      */
-    private boolean singleUnitStrategy(Unit unit, Chess chess, Comparator<Chess> chessComparator) {
-        boolean isChess = unit.getUnitType().equals(UnitType.CHESS);
-        boolean isCave = unit.getUnitType().equals(UnitType.CAVE) && ((Cave) unit).isMaximizer() == chess.isMaximizer();
-        if (!isChess && !isCave) return true;
-        return isChess && chessComparator.compare(chess, (Chess) unit) >= 0;
+    private boolean noCrossRiverMove(GameBoard gameBoard, Chess chess, int x, int y) {
+        boolean blankOrTrapOrCave = gameBoard.isBlank(x, y)
+                || gameBoard.isTrap(x, y)
+                || gameBoard.isCave(x, y, !chess.isMaximizer());
+
+        boolean smallerChess = gameBoard.hasChess(x, y, !chess.isMaximizer())
+                && gameBoard.chessCompare(chess, gameBoard.getChess(x, y)) >= 0;
+
+        return blankOrTrapOrCave || smallerChess;
     }
 
     private boolean ratInRiver(GameBoard gameBoard, Point src, Point dst) {
-        int[] direction = new int[]{0, 0};
-        if (src.getX() > dst.getX()) {
-            direction = new int[]{-1, 0};
-        } else if (src.getX() < dst.getY()) {
-            direction = new int[]{1, 0};
-        } else if (src.getY() > dst.getY()) {
-            direction = new int[]{0, -1};
-        } else if (src.getY() < dst.getY()) {
-            direction = new int[]{0, 1};
+        Chess rat1 = gameBoard.getChess(ChessType.RAT, true);
+        Chess rat2 = gameBoard.getChess(ChessType.RAT, false);
+
+        int minX = Math.min(src.getX(), dst.getX());
+        int maxX = Math.max(src.getX(), dst.getX());
+        int minY = Math.min(src.getY(), dst.getY());
+        int maxY = Math.max(src.getY(), dst.getY());
+
+        if (!gameBoard.chessDied(rat1) && gameBoard.isRiver(rat1.getX(), rat1.getY())) {
+            return (rat1.getX() > minX && rat1.getX() < maxX) || (rat1.getY() > minY && rat1.getY() < maxY);
         }
-
-        int nextX = src.getX() + direction[0];
-        int nextY = src.getY() + direction[1];
-
-        while (nextX != dst.getX() || nextY != dst.getY()) {
-            Set<Unit> riverUnits = gameBoard.findUnitAtPoint(nextX, nextY);
-            if (riverUnits.size() > 1) {
-                return true;
-            }
-            nextX += direction[0];
-            nextY += direction[1];
+        if(!gameBoard.chessDied(rat2) && rat2 != null && gameBoard.isRiver(rat2.getX(), rat2.getY())){
+            return (rat2.getX() > minX && rat2.getX() < maxX) || (rat2.getY() > minY && rat2.getY() < maxY);
         }
         return false;
     }

@@ -15,43 +15,25 @@ public class RatMovingStrategy implements MovingStrategy {
 
     @Override
     public boolean canMove(Chess chess, int x, int y) {
-        GameBoard gameBoard = GameContextHolder.getGameBoard();
-        Comparator<Chess> chessComparator = gameBoard.chessComparator();
-        Set<Unit> units = gameBoard.findUnitAtPoint(x, y);
-        // 是空地，可以移动
-        Point point = chess.getPoint();
-        if (units == null) {
-            return true;
-        }
-
-        boolean isInRiver = gameBoard.findUnitAtPoint(point.getX(), point.getY()).stream().anyMatch(unit -> unit.getUnitType().equals(UnitType.RIVER));
+        GameBoard gameBoard = GameBoard.INSTANCE;
 
         /*
-         不叠子的情况，陷阱，棋子，洞穴，河流，以下情况可以移动
-         1. 自己在河中，下一个地点不是棋子，也不是己方洞穴
-         2. 自己不在河中，下一个地点不是棋子，也不是己方洞穴
-         3. 自己不在河中，下一个地点是棋子，且比自己小
+         可以移动的情况
+         1. 下一个地点是空地、陷阱、敌方洞穴
+         2. 自己不在河中，下一个地点包含敌方棋子，且不在河中，且比自己小
+         3. 自己不在河中，下一个地点是河中，且不能有任何棋子
+         4. 自己在河中，下一个地点也在河中
          */
-        if (units.size() == 1) {
-            Unit unit = units.iterator().next();
-            boolean isChess = unit.getUnitType().equals(UnitType.CHESS);
-            boolean isCave = unit.getUnitType().equals(UnitType.CAVE) && ((Cave) unit).isMaximizer() == chess.isMaximizer();
-            if (isInRiver) return !isChess && !isCave;
+        boolean isInRiver = gameBoard.isRiver(chess.getX(), chess.getY());
+        boolean isRiver = gameBoard.isRiver(x, y);
+        boolean blankOrTrapOrCave = gameBoard.isBlank(x, y)
+                || gameBoard.isTrap(x, y)
+                || gameBoard.isCave(x, y, !chess.isMaximizer());
+        boolean smallerChessAndNotRiver = !isRiver
+                && gameBoard.hasChess(x, y, !chess.isMaximizer())
+                && gameBoard.chessCompare(chess, gameBoard.getChess(x, y)) >= 0;
 
-            if (!isChess && !isCave) return true;
-            return isChess && chessComparator.compare(chess, (Chess) unit) >= 0;
-        }
-
-        /*
-         叠子的情况，陷阱+棋子(岸上)，河流+老鼠，以下情况可以移动
-         1. 自己在河中，下一个地点不是岸上
-         2. 自己不在河中，下一个地点是 我方陷阱+敌方棋子
-         */
-        boolean isRiver = gameBoard.findUnitAtPoint(x, y).stream().anyMatch(unit -> unit.getUnitType().equals(UnitType.RIVER));
-        if (isInRiver && !isRiver) {
-            return false;
-        }
-
-        return gameBoard.isChessTrapped(x, y, chess.isMaximizer());
+        return blankOrTrapOrCave || (!isInRiver && smallerChessAndNotRiver)
+                || (!isInRiver && isRiver && !gameBoard.hasChess(x,y)) || (isInRiver && isRiver);
     }
 }

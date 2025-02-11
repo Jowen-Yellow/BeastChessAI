@@ -35,20 +35,20 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
 
     @Override
     public List<Point> nextAvailableMoves() {
-        GameBoard board = GameContextHolder.getGameBoard();
+        GameBoard board = GameBoard.INSTANCE;
         List<Point> candidates = new ArrayList<>(4);
 
         int[][] directions = getDirections();
 
         for (int[] direction : directions) {
-            int x=getX()+direction[0];
-            int y=getY()+direction[1];
+            int x = getX() + direction[0];
+            int y = getY() + direction[1];
 
-            if (!board.isValidPosition(x, y)){
+            if (!board.isValidPosition(x, y)) {
                 continue;
             }
 
-            if(getMovingStrategy().canMove(this,x,y)){
+            if (getMovingStrategy().canMove(this, x, y)) {
                 candidates.add(new Point(x, y));
             }
         }
@@ -56,54 +56,45 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
         return candidates;
     }
 
-    public int[][] getDirections(){
-        return new int[][]{{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    public int[][] getDirections() {
+        GameBoard gameBoard = GameBoard.INSTANCE;
+        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        return Arrays.stream(directions)
+                .filter(direction -> gameBoard.isValidPosition(getX() + direction[0], getY() + direction[1]))
+                .toArray(int[][]::new);
     }
 
     /**
+     * 2
      * 移动，请先检查是否可以移动
      */
     @Override
-    public void move(int x, int y, Iterator<Chess> iterator) {
-        GameBoard gameBoard = GameContextHolder.getGameBoard();
-        // 删除当前位置棋子
-        Set<Unit> currentUnits = gameBoard.findUnitAtPoint(getX(), getY());
+    public Chess move(int x, int y) {
+        GameBoard gameBoard = GameBoard.INSTANCE;
 
-        if(currentUnits.size()==1){
-            gameBoard.removeUnitsAtPoint(getX(), getY());
-        }else{
-            currentUnits.removeIf(unit -> unit.getUnitType().equals(UnitType.CHESS));
+        Chess willBeEaten = null;
+        if (gameBoard.hasChess(x, y)) {
+            willBeEaten = gameBoard.getChess(x, y);
         }
 
-        if(iterator == null){
-            if(maximizer){
-                gameBoard.maximizerChessMap.remove(new Point(x, y));
-            }else{
-                gameBoard.minimizerChessMap.remove(new Point(x, y));
-            }
-        }else {
-            iterator.remove();
-        }
-        gameBoard.getChessMap().remove(this.getPoint());
+        // 更新棋盘
+        gameBoard.applyMove(this.getPoint(), new Point(x, y));
 
-        Point point = this.getPoint();
-        point.setX(x);
-        point.setY(y);
+        // 更新棋子位置
+        this.getPoint().setX(x);
+        this.getPoint().setY(y);
+        return willBeEaten;
+    }
 
-        // 添加到新位置
-        Set<Unit> nextUnits = gameBoard.findUnitAtPoint(x, y);
-        if(nextUnits != null){
-            nextUnits.removeIf(unit -> unit.getUnitType().equals(UnitType.CHESS)); // 移除棋子
-            nextUnits.add(this);
-        }else {
-            gameBoard.getBoard().put(new Point(x, y), new HashSet<>(Collections.singleton(this)));
-        }
-        gameBoard.getChessMap().put(new Point(x, y), this);
-        if(this.isMaximizer()){
-            gameBoard.maximizerChessMap.put(new Point(x, y), this);
-        }else{
-            gameBoard.minimizerChessMap.put(new Point(x, y), this);
-        }
+    public void tracebackMove(int originalX, int originalY) {
+        GameBoard gameBoard = GameBoard.INSTANCE;
+
+        // 更新棋盘
+        gameBoard.applyMove(this.getPoint(), new Point(originalX, originalY));
+
+        // 更新棋子位置
+        this.getPoint().setX(originalX);
+        this.getPoint().setY(originalY);
     }
 
     @Override
@@ -112,16 +103,7 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
     }
 
     @Override
-    public boolean isInDanger(){
-        GameBoard gameBoard = GameContextHolder.getGameBoard();
-        Comparator<Chess> chessComparator = gameBoard.chessComparator();
-
-        List<Chess> list = gameBoard.chessMap.values().stream()
-                .filter(chess -> chess.isMaximizer() != this.isMaximizer())
-                .filter(chess -> chessComparator.compare(chess, this) >= 0)
-                .filter(chess -> chess.nextAvailableMoves().stream().anyMatch(point -> point.equals(this.getPoint())))
-                .toList();
-
-        return !list.isEmpty();
+    public boolean isInDanger() {
+        return false;
     }
 }
