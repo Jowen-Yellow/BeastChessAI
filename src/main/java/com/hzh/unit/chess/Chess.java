@@ -16,6 +16,6 @@ public interface Chess extends Unit {
     ChessType getChessType();
     MovingStrategy getMovingStrategy();
     boolean isInDanger();
-    List<Point> nextAvailableMoves();
+    int[][] nextAvailableMoves();
     Chess move(int x, int y);
 }

@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameBoard {
     private final Comparator<Chess> chessComparator;
@@ -27,6 +28,18 @@ public class GameBoard {
             {0, 200, 0, 0, 0, 300, 0},
             {600, 0, 0, 0, 0, 0, 700}
     };
+
+//    private final int[][] chess = {
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, -800, 100},
+//            {-100, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0},
+//            {0, 0, 0, 0, 0, 0, 0}
+//    };
 
     private final int[][] river = {
             {0, 0, 0, 0, 0, 0, 0},
@@ -138,9 +151,9 @@ public class GameBoard {
         return chessComparator.compare(chess1, chess2);
     }
 
-    public void applyMove(Point src, Point dst) {
-        chess[dst.getX()][dst.getY()] = chess[src.getX()][src.getY()];
-        chess[src.getX()][src.getY()] = 0;
+    public void applyMove(int srcX, int srcY, int dstX, int dstY) {
+        chess[dstX][dstY] = chess[srcX][srcY];
+        chess[srcX][srcY] = 0;
     }
 
     public void recoverChess(Chess c) {
@@ -156,7 +169,22 @@ public class GameBoard {
                     Chess chess = getChess(i, j);
                     score += this.chess[i][j];
                     if (chess.getChessType().equals(ChessType.RAT)) {
-                        score += chess.isMaximizer() ? 800 : -800;
+                        // 控制河流
+                        if (isRiver(i, j)) {
+                            score += chess.isMaximizer() ? 100 : -100;
+                        }
+                        // 优先保护老鼠
+                        if (chess.isInDanger()) {
+                            score += chess.isMaximizer() ? 500 : -500;
+                        }
+                    }
+                    // 优先攻占敌方洞穴
+                    if (isCave(i, j)) {
+                        score += chess.isMaximizer() ? 1000 : -1000;
+                    }
+                    // 优先占领我方陷阱位置
+                    if (isTrap(i, j)) {
+                        score += chess.isMaximizer() ? 150 : -150;
                     }
                 }
             }
@@ -218,6 +246,10 @@ public class GameBoard {
         System.out.println("2:蓝方");
         System.out.print("请选择阵营：");
         int camp = scanner.nextInt();
+        if (camp != 1 && camp != 2) {
+            System.out.println("请选择正确的阵营");
+            return;
+        }
         boolean isMaximizer = camp == 2;
         for (int i = 0; i < ChessType.values().length; i++) {
             System.out.println(i + 1 + ":" + ChessType.values()[i].getName());
@@ -230,30 +262,35 @@ public class GameBoard {
             return;
         }
 
-        List<Point> points = chess.nextAvailableMoves();
-        Map<String, Point> pointMap = new HashMap<>();
-        for (Point point : points) {
-            if (point.getX() < chess.getPoint().getX()) {
-                pointMap.put("上", point);
-            } else if (point.getX() > chess.getPoint().getX()) {
-                pointMap.put("下", point);
-            } else if (point.getY() < chess.getPoint().getY()) {
-                pointMap.put("左", point);
-            } else if (point.getY() > chess.getPoint().getY()) {
-                pointMap.put("右", point);
-            }
-        }
-        List<String> directions = pointMap.keySet().stream().toList();
-        if (directions.isEmpty()) {
+        int[][] moves = chess.nextAvailableMoves();
+        if (moves == null) {
             System.out.println("无可移动方向");
             return;
         }
+        Map<String, int[]> pointMap = new LinkedHashMap<>();
+        for (int[] move : moves) {
+            if (move[0] < chess.getX()) {
+                pointMap.put("上", move);
+            } else if (move[0] > chess.getX()) {
+                pointMap.put("下", move);
+            } else if (move[1] < chess.getY()) {
+                pointMap.put("左", move);
+            } else if (move[1] > chess.getY()) {
+                pointMap.put("右", move);
+            }
+        }
+
+        List<String> directions = pointMap.keySet().stream().toList();
         for (int i = 0; i < directions.size(); i++) {
             System.out.println(i + 1 + ":" + directions.get(i));
         }
         System.out.print("请选择方向：");
         int direction = scanner.nextInt();
-        chess.move(pointMap.get(directions.get(direction - 1)).getX(), pointMap.get(directions.get(direction - 1)).getY());
+        if (direction < 1 || direction > directions.size()) {
+            System.out.println("请选择正确的方向");
+            return;
+        }
+        chess.move(pointMap.get(directions.get(direction - 1))[0], pointMap.get(directions.get(direction - 1))[1]);
         isMyTurn = false;
     }
 
@@ -279,9 +316,7 @@ public class GameBoard {
         chessList.add(new Tiger(8, 0, true));
         chessList.add(new Elephant(6, 0, true));
 
-        chessList.forEach(chess -> {
-            chessMap.put(chess.value(), chess);
-        });
+        chessList.forEach(chess -> chessMap.put(chess.value(), chess));
     }
 
     private Comparator<Chess> chessComparator() {
@@ -289,12 +324,12 @@ public class GameBoard {
             if (o1.isMaximizer() == o2.isMaximizer()) {
                 return -1;
             }
-            if (o1 instanceof Rat && o2 instanceof Elephant) {
+            if (o1.getChessType().equals(ChessType.RAT) && o2.getChessType().equals(ChessType.ELEPHANT)) {
                 return 1;
-            } else if (o1 instanceof Elephant && o2 instanceof Rat) {
+            } else if (o1.getChessType().equals(ChessType.ELEPHANT) && o2.getChessType().equals(ChessType.RAT)) {
                 return -1;
             }
-            return Integer.compare(o1.value(), o2.value());
+            return Integer.compare(Math.abs(o1.value()), Math.abs(o2.value()));
         };
     }
 }

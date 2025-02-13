@@ -1,21 +1,20 @@
 package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.GameContextHolder;
-import com.hzh.unit.Unit;
-import com.hzh.unit.UnitType;
-
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Set;
 
 public abstract class AbstractBeastKing extends AbstractChess{
+    private int[][] cacheDirections;
+
     public AbstractBeastKing(int x, int y, boolean maximizer) {
         super(x, y, maximizer);
     }
 
     @Override
     public int[][] getDirections() {
+        if(getX()==getLastX() && getY()==getLastY()){
+            return cacheDirections;
+        }
+
         GameBoard gameBoard = GameBoard.INSTANCE;
         int[][] directions = super.getDirections();
         for (int[] direction : directions) {
@@ -33,6 +32,10 @@ public abstract class AbstractBeastKing extends AbstractChess{
             direction[0]=offsetX;
             direction[1]=offsetY;
         }
-        return directions;
+
+        cacheDirections=directions;
+        setLastX(getX());
+        setLastY(getY());
+        return cacheDirections;
     }
 }

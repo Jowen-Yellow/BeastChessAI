@@ -17,6 +17,10 @@ import java.util.*;
 public abstract class AbstractChess extends AbstractUnit implements Chess {
     private final boolean maximizer;
     private boolean inDanger;
+    private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    private int[][] cacheDirections;
+    private int lastX=-1;
+    private int lastY=-1;
 
     @Override
     public UnitType getUnitType() {
@@ -34,34 +38,43 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
     }
 
     @Override
-    public List<Point> nextAvailableMoves() {
-        GameBoard board = GameBoard.INSTANCE;
-        List<Point> candidates = new ArrayList<>(4);
-
+    public int[][] nextAvailableMoves() {
+        int validCount = 0;
+        int[][] candidates = new int[4][];
         int[][] directions = getDirections();
 
         for (int[] direction : directions) {
             int x = getX() + direction[0];
             int y = getY() + direction[1];
 
-            if (!board.isValidPosition(x, y)) {
-                continue;
-            }
-
             if (getMovingStrategy().canMove(this, x, y)) {
-                candidates.add(new Point(x, y));
+                candidates[validCount++] = new int[]{x, y};
             }
         }
 
-        return candidates;
+        return Arrays.copyOf(candidates, validCount);
     }
 
     public int[][] getDirections() {
+        if(getX()==lastX && getY()==lastY){
+            return cacheDirections;
+        }
+
         GameBoard gameBoard = GameBoard.INSTANCE;
-        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-        return Arrays.stream(directions)
-                .filter(direction -> gameBoard.isValidPosition(getX() + direction[0], getY() + direction[1]))
-                .toArray(int[][]::new);
+        int validCount = 0;
+        int[][] temp = new int[4][2];
+        for (int[] direction : DIRECTIONS) {
+            if(gameBoard.isValidPosition(getX() + direction[0], getY() + direction[1])){
+                temp[validCount][0] = direction[0];
+                temp[validCount][1] = direction[1];
+                validCount++;
+            }
+        }
+
+        cacheDirections = Arrays.copyOf(temp, validCount);
+        lastX = getX();
+        lastY = getY();
+        return cacheDirections;
     }
 
     /**
@@ -78,7 +91,7 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
         }
 
         // 更新棋盘
-        gameBoard.applyMove(this.getPoint(), new Point(x, y));
+        gameBoard.applyMove(getX(), getY(), x, y);
 
         // 更新棋子位置
         this.getPoint().setX(x);
