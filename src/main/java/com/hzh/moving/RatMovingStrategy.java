@@ -1,15 +1,7 @@
 package com.hzh.moving;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.GameContextHolder;
-import com.hzh.game.Point;
-import com.hzh.unit.Cave;
-import com.hzh.unit.Unit;
-import com.hzh.unit.UnitType;
 import com.hzh.unit.chess.Chess;
-
-import java.util.Comparator;
-import java.util.Set;
 
 public class RatMovingStrategy implements MovingStrategy {
 

@@ -1,7 +1,6 @@
 package com.hzh.moving;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.Point;
 import com.hzh.unit.chess.Chess;
 import com.hzh.unit.chess.ChessType;
 
@@ -48,12 +47,13 @@ public class LionMovingStrategy implements MovingStrategy {
         int minY = Math.min(srcY, dstY);
         int maxY = Math.max(srcY, dstY);
 
-        if (!gameBoard.chessDied(rat1) && gameBoard.isRiver(rat1.getX(), rat1.getY())) {
-            return (rat1.getX() > minX && rat1.getX() < maxX) || (rat1.getY() > minY && rat1.getY() < maxY);
+        return checkRatInRiver(gameBoard, rat1, minX, maxX, minY, maxY) || checkRatInRiver(gameBoard, rat2, minX, maxX, minY, maxY);
+    }
+
+    private boolean checkRatInRiver(GameBoard gameBoard, Chess rat, int minX, int maxX, int minY, int maxY) {
+        if (gameBoard.chessDied(rat) || !gameBoard.isRiver(rat.getX(), rat.getY())) {
+            return false;
         }
-        if (!gameBoard.chessDied(rat2) && gameBoard.isRiver(rat2.getX(), rat2.getY())) {
-            return (rat2.getX() > minX && rat2.getX() < maxX) || (rat2.getY() > minY && rat2.getY() < maxY);
-        }
-        return false;
+        return (rat.getY() == minY && rat.getX() > minX && rat.getX() < maxX) || (rat.getX() == minX && rat.getY() > minY && rat.getY() < maxY);
     }
 }

@@ -93,7 +93,7 @@ public class BeastChessAI {
                     for (int[] move : moves) {
                         // 执行移动
                         Chess willBeEaten = chess.move(move[0], move[1]);
-                        int value = minimax(8, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+                        int value = minimax(4, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
                         if(value>max){
                             max= value;
                             bestPoint.setX(move[0]);

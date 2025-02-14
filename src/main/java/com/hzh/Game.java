@@ -3,14 +3,6 @@ package com.hzh;
 import com.hzh.ai.BeastChessAI;
 import com.hzh.game.GameBoard;
 import com.hzh.game.GameContextHolder;
-import com.hzh.game.Point;
-import com.hzh.unit.chess.Chess;
-import com.hzh.unit.chess.ChessType;
-import com.hzh.unit.chess.Lion;
-
-import javax.swing.tree.TreeNode;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Game {
     static int count=0;

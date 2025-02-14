@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameBoard {
     private final Comparator<Chess> chessComparator;
@@ -173,10 +172,10 @@ public class GameBoard {
                         if (isRiver(i, j)) {
                             score += chess.isMaximizer() ? 100 : -100;
                         }
-                        // 优先保护老鼠
-                        if (chess.isInDanger()) {
-                            score += chess.isMaximizer() ? 500 : -500;
-                        }
+//                        // 优先保护老鼠
+//                        if (chess.isInDanger()) {
+//                            score += chess.isMaximizer() ? 500 : -500;
+//                        }
                     }
                     // 优先攻占敌方洞穴
                     if (isCave(i, j)) {
@@ -184,7 +183,7 @@ public class GameBoard {
                     }
                     // 优先占领我方陷阱位置
                     if (isTrap(i, j)) {
-                        score += chess.isMaximizer() ? 150 : -150;
+                        score += chess.isMaximizer() ? 50 : -50;
                     }
                 }
             }

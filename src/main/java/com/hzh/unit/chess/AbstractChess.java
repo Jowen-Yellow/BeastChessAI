@@ -1,16 +1,13 @@
 package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.GameContextHolder;
-import com.hzh.game.Point;
 import com.hzh.moving.MovingStrategy;
 import com.hzh.unit.AbstractUnit;
-import com.hzh.unit.Unit;
 import com.hzh.unit.UnitType;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.*;
+import java.util.Arrays;
 
 @Getter
 @Setter
