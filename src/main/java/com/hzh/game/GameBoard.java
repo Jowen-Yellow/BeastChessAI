@@ -1,5 +1,6 @@
 package com.hzh.game;
 
+import com.hzh.ai.BeastChessAI;
 import com.hzh.unit.chess.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,13 +9,11 @@ import java.util.*;
 
 public class GameBoard {
     private final Comparator<Chess> chessComparator;
-    private boolean isMyTurn = true;
+    public static boolean isMyTurn = true;
+    public static boolean isMaximizer = true;
     public static final int BOARD_WIDTH = 7;
     public static final int BOARD_HEIGHT = 9;
     public static final GameBoard INSTANCE = new GameBoard();
-    @Getter
-    @Setter
-    private int evaluation = 0;
 
     private final int[][] chess = {
             {-700, 0, 0, 0, 0, 0, -600},
@@ -234,12 +233,7 @@ public class GameBoard {
         System.out.println("--------------------------------------------");
     }
 
-    public void nextTurn() {
-        if (!isMyTurn) {
-            GameContextHolder.beastChessAI.move();
-            isMyTurn = true;
-            return;
-        }
+    public void selectSide(){
         Scanner scanner = new Scanner(System.in);
         System.out.println("1:红方");
         System.out.println("2:蓝方");
@@ -249,7 +243,17 @@ public class GameBoard {
             System.out.println("请选择正确的阵营");
             return;
         }
-        boolean isMaximizer = camp == 2;
+        isMaximizer = camp == 2;
+    }
+
+    public void nextTurn() {
+        if (!isMyTurn) {
+            BeastChessAI.INSTANCE.move(!isMaximizer);
+            isMyTurn = true;
+            return;
+        }
+
+        Scanner scanner = new Scanner(System.in);
         for (int i = 0; i < ChessType.values().length; i++) {
             System.out.println(i + 1 + ":" + ChessType.values()[i].getName());
         }

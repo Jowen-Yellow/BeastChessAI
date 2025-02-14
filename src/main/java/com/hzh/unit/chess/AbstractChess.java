@@ -2,8 +2,6 @@ package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
 import com.hzh.moving.MovingStrategy;
-import com.hzh.unit.AbstractUnit;
-import com.hzh.unit.UnitType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,7 +9,8 @@ import java.util.Arrays;
 
 @Getter
 @Setter
-public abstract class AbstractChess extends AbstractUnit implements Chess {
+public abstract class AbstractChess implements Chess {
+    private int x, y;
     private final boolean maximizer;
     private boolean inDanger;
     private static final int[][] DIRECTIONS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
@@ -19,13 +18,9 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
     private int lastX=-1;
     private int lastY=-1;
 
-    @Override
-    public UnitType getUnitType() {
-        return UnitType.CHESS;
-    }
-
     public AbstractChess(int x, int y, boolean maximizer) {
-        super(x, y);
+        this.x = x;
+        this.y = y;
         this.maximizer = maximizer;
     }
 
@@ -75,7 +70,7 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
     }
 
     /**
-     * 2
+     *
      * 移动，请先检查是否可以移动
      */
     @Override
@@ -91,8 +86,8 @@ public abstract class AbstractChess extends AbstractUnit implements Chess {
         gameBoard.applyMove(getX(), getY(), x, y);
 
         // 更新棋子位置
-        this.getPoint().setX(x);
-        this.getPoint().setY(y);
+        this.setX(x);
+        this.setY(y);
         return willBeEaten;
     }
 

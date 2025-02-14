@@ -2,9 +2,8 @@ package com.hzh.unit.chess;
 
 
 import com.hzh.moving.MovingStrategy;
-import com.hzh.unit.Unit;
 
-public interface Chess extends Unit {
+public interface Chess{
     int getX();
     int getY();
     int value();

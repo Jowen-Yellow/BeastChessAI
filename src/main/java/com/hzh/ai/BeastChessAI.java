@@ -1,10 +1,10 @@
 package com.hzh.ai;
 
 import com.hzh.game.GameBoard;
-import com.hzh.game.Point;
 import com.hzh.unit.chess.Chess;
 
 public class BeastChessAI {
+    public static final BeastChessAI INSTANCE= new BeastChessAI();
     private final GameBoard gameBoard= GameBoard.INSTANCE;
     private int count =0;
 
@@ -12,9 +12,9 @@ public class BeastChessAI {
      * 估值函数
      * @param depth 深度
      * @param alpha alpha剪枝，表示当前节点的最大值
-     * @param beta
-     * @param maximizer
-     * @return
+     * @param beta beta剪枝，表示当前节点的最小值
+     * @param maximizer 是否是最大值节点
+     * @return 估值
      */
     public int minimax(int depth, int alpha, int beta, boolean maximizer) {
         count++;
@@ -28,8 +28,8 @@ public class BeastChessAI {
                 for(int j=0;j<GameBoard.BOARD_WIDTH;j++){
                     if(gameBoard.hasChess(i,j, true)){
                         Chess chess = gameBoard.getChess(i, j);
-                        int originalX= chess.getPoint().getX();
-                        int originalY= chess.getPoint().getY();
+                        int originalX= chess.getX();
+                        int originalY= chess.getY();
                         int[][] moves = chess.nextAvailableMoves();
                         for (int[] move : moves) {
                             // 执行移动
@@ -55,8 +55,8 @@ public class BeastChessAI {
                 for(int j=0;j<GameBoard.BOARD_WIDTH;j++){
                     if(gameBoard.hasChess(i,j, false)){
                         Chess chess = gameBoard.getChess(i, j);
-                        int originalX= chess.getPoint().getX();
-                        int originalY= chess.getPoint().getY();
+                        int originalX= chess.getX();
+                        int originalY= chess.getY();
                         int[][] moves = chess.nextAvailableMoves();
                         for (int[] move : moves) {
                             // 执行移动
@@ -79,37 +79,66 @@ public class BeastChessAI {
         }
     }
 
-    public void move() {
-        int max= Integer.MIN_VALUE;
+    public void move(boolean maximizer) {
         Chess bestChess= null;
-        Point bestPoint= new Point(-1,-1);
-        for(int i=0;i<GameBoard.BOARD_HEIGHT;i++){
-            for(int j=0;j<GameBoard.BOARD_WIDTH;j++){
-                if(gameBoard.hasChess(i,j, true)){
-                    Chess chess = gameBoard.getChess(i, j);
-                    int originalX= chess.getPoint().getX();
-                    int originalY= chess.getPoint().getY();
-                    int[][] moves = chess.nextAvailableMoves();
-                    for (int[] move : moves) {
-                        // 执行移动
-                        Chess willBeEaten = chess.move(move[0], move[1]);
-                        int value = minimax(4, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
-                        if(value>max){
-                            max= value;
-                            bestPoint.setX(move[0]);
-                            bestPoint.setY(move[1]);
-                            bestChess= chess;
+        int[] bestPoint= {-1,-1};
+        if(maximizer){
+            int max= Integer.MIN_VALUE;
+            for(int i=0;i<GameBoard.BOARD_HEIGHT;i++){
+                for(int j=0;j<GameBoard.BOARD_WIDTH;j++){
+                    if(gameBoard.hasChess(i,j, true)){
+                        Chess chess = gameBoard.getChess(i, j);
+                        int originalX= chess.getX();
+                        int originalY= chess.getY();
+                        int[][] moves = chess.nextAvailableMoves();
+                        for (int[] move : moves) {
+                            // 执行移动
+                            Chess willBeEaten = chess.move(move[0], move[1]);
+                            int value = minimax(6, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
+                            if(value>max){
+                                max= value;
+                                bestPoint[0]=move[0];
+                                bestPoint[1]=move[1];
+                                bestChess= chess;
+                            }
+                            // 撤销移动 并恢复被吃的棋子
+                            chess.move(originalX, originalY);
+                            gameBoard.recoverChess(willBeEaten);
                         }
-                        // 撤销移动 并恢复被吃的棋子
-                        chess.move(originalX, originalY);
-                        gameBoard.recoverChess(willBeEaten);
+                    }
+                }
+            }
+        }else{
+            int min= Integer.MAX_VALUE;
+            for (int i = 0; i < GameBoard.BOARD_HEIGHT; i++) {
+                for (int j = 0; j < GameBoard.BOARD_WIDTH; j++) {
+                    if (gameBoard.hasChess(i, j, false)) {
+                        Chess chess = gameBoard.getChess(i, j);
+                        int originalX = chess.getX();
+                        int originalY = chess.getY();
+                        int[][] moves = chess.nextAvailableMoves();
+                        for (int[] move : moves) {
+                            // 执行移动
+                            Chess willBeEaten = chess.move(move[0], move[1]);
+                            int value = minimax(6, Integer.MIN_VALUE, Integer.MAX_VALUE, true);
+                            if (value < min) {
+                                min = value;
+                                bestPoint[0] = move[0];
+                                bestPoint[1] = move[1];
+                                bestChess = chess;
+                            }
+                            // 撤销移动 并恢复被吃的棋子
+                            chess.move(originalX, originalY);
+                            gameBoard.recoverChess(willBeEaten);
+                        }
                     }
                 }
             }
         }
-        if(bestPoint.getX()!=-1 && bestPoint.getY()!=-1){
-            bestChess.move(bestPoint.getX(), bestPoint.getY());
-            System.out.println("AI移动："+bestChess.getChessType().getName()+"->"+"("+bestPoint.getX()+","+bestPoint.getY()+")");
+
+        if(bestPoint[0]!=-1 && bestPoint[1]!=-1){
+            bestChess.move(bestPoint[0], bestPoint[1]);
+            System.out.println("AI移动："+bestChess.getChessType().getName()+"->"+"("+bestPoint[0]+","+bestPoint[1]+")");
         }
         System.out.println("AI计算次数："+count);
     }

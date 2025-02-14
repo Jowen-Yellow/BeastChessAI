@@ -2,21 +2,11 @@ package com.hzh;
 
 import com.hzh.ai.BeastChessAI;
 import com.hzh.game.GameBoard;
-import com.hzh.game.GameContextHolder;
 
 public class Game {
     static int count=0;
     public static void main(String[] args) {
-        BeastChessAI beastChessAI = new BeastChessAI();
-        GameContextHolder.setBeastChessAI(beastChessAI);
         GameBoard gameBoard = GameBoard.INSTANCE;
-
-//        Lion chess = (Lion)gameBoard.getChess(ChessType.LION, true);
-//        int[][] directions = chess.getDirections();
-//        for (int[] direction : directions) {
-//            System.out.println(direction[0]+","+direction[1]);
-//        }
-
 
         while (!gameBoard.gameOver()) {
             gameBoard.printBoard();
