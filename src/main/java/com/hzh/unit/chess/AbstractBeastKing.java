@@ -1,6 +1,7 @@
 package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
+import com.hzh.game.GameContext;
 
 public abstract class AbstractBeastKing extends AbstractChess{
     private int[][] cacheDirections;
@@ -15,7 +16,7 @@ public abstract class AbstractBeastKing extends AbstractChess{
             return cacheDirections;
         }
 
-        GameBoard gameBoard = GameBoard.INSTANCE;
+        GameBoard gameBoard = GameContext.GAME_BOARD;
         int[][] directions = super.getDirections();
         for (int[] direction : directions) {
             int x=getX()+direction[0];

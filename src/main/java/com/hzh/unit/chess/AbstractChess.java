@@ -1,6 +1,7 @@
 package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
+import com.hzh.game.GameContext;
 import com.hzh.moving.MovingStrategy;
 import lombok.Getter;
 import lombok.Setter;
@@ -52,7 +53,7 @@ public abstract class AbstractChess implements Chess {
             return cacheDirections;
         }
 
-        GameBoard gameBoard = GameBoard.INSTANCE;
+        GameBoard gameBoard = GameContext.GAME_BOARD;
         int validCount = 0;
         int[][] temp = new int[4][2];
         for (int[] direction : DIRECTIONS) {
@@ -67,28 +68,6 @@ public abstract class AbstractChess implements Chess {
         lastX = getX();
         lastY = getY();
         return cacheDirections;
-    }
-
-    /**
-     *
-     * 移动，请先检查是否可以移动
-     */
-    @Override
-    public Chess move(int x, int y) {
-        GameBoard gameBoard = GameBoard.INSTANCE;
-
-        Chess willBeEaten = null;
-        if (gameBoard.hasChess(x, y)) {
-            willBeEaten = gameBoard.getChess(x, y);
-        }
-
-        // 更新棋盘
-        gameBoard.applyMove(getX(), getY(), x, y);
-
-        // 更新棋子位置
-        this.setX(x);
-        this.setY(y);
-        return willBeEaten;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.hzh.moving;
 
 import com.hzh.game.GameBoard;
+import com.hzh.game.GameContext;
 import com.hzh.unit.chess.Chess;
 import com.hzh.unit.chess.ChessType;
 
@@ -8,7 +9,7 @@ public class LionMovingStrategy implements MovingStrategy {
 
     @Override
     public boolean canMove(Chess chess, int x, int y) {
-        GameBoard gameBoard = GameBoard.INSTANCE;
+        GameBoard gameBoard = GameContext.GAME_BOARD;
 
         /*
          可以移动的情况
@@ -51,7 +52,7 @@ public class LionMovingStrategy implements MovingStrategy {
     }
 
     private boolean checkRatInRiver(GameBoard gameBoard, Chess rat, int minX, int maxX, int minY, int maxY) {
-        if (gameBoard.chessDied(rat) || !gameBoard.isRiver(rat.getX(), rat.getY())) {
+        if (rat == null || gameBoard.chessDied(rat) || !gameBoard.isRiver(rat.getX(), rat.getY())) {
             return false;
         }
         return (rat.getY() == minY && rat.getX() > minX && rat.getX() < maxX) || (rat.getX() == minX && rat.getY() > minY && rat.getY() < maxY);

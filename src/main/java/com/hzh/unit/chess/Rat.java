@@ -1,6 +1,7 @@
 package com.hzh.unit.chess;
 
 import com.hzh.game.GameBoard;
+import com.hzh.game.GameContext;
 
 public class Rat extends AbstractChess{
 
@@ -10,7 +11,7 @@ public class Rat extends AbstractChess{
 
     @Override
     public boolean isInDanger() {
-        GameBoard gameBoard = GameBoard.INSTANCE;
+        GameBoard gameBoard = GameContext.GAME_BOARD;
         boolean inDanger=false;
 
         // 判断四个方向有没有威胁

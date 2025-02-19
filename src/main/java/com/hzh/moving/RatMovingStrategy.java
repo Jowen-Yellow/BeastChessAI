@@ -1,13 +1,14 @@
 package com.hzh.moving;
 
 import com.hzh.game.GameBoard;
+import com.hzh.game.GameContext;
 import com.hzh.unit.chess.Chess;
 
 public class RatMovingStrategy implements MovingStrategy {
 
     @Override
     public boolean canMove(Chess chess, int x, int y) {
-        GameBoard gameBoard = GameBoard.INSTANCE;
+        GameBoard gameBoard = GameContext.GAME_BOARD;
 
         /*
          可以移动的情况

@@ -13,9 +13,13 @@ public class GameBoard {
     public static boolean isMaximizer = true;
     public static final int BOARD_WIDTH = 7;
     public static final int BOARD_HEIGHT = 9;
-    public static final GameBoard INSTANCE = new GameBoard();
+    private final long[][][] zobristTable = new long[BOARD_HEIGHT][BOARD_WIDTH][16];
+    private long playerHash;
 
-    private final int[][] chess = {
+    private final Deque<Long> hashHistory = new ArrayDeque<>();
+    private final Deque<Chess> chessHistory = new ArrayDeque<>();
+
+    private final int[][] DEFAULT_CHESS={
             {-700, 0, 0, 0, 0, 0, -600},
             {0, -300, 0, 0, 0, -200, 0},
             {-100, 0, -500, 0, -400, 0, -800},
@@ -27,17 +31,7 @@ public class GameBoard {
             {600, 0, 0, 0, 0, 0, 700}
     };
 
-//    private final int[][] chess = {
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, -800, 100},
-//            {-100, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0},
-//            {0, 0, 0, 0, 0, 0, 0}
-//    };
+    private int[][] chess;
 
     private final int[][] river = {
             {0, 0, 0, 0, 0, 0, 0},
@@ -78,6 +72,13 @@ public class GameBoard {
     public final Map<Integer, Chess> chessMap = new HashMap<>(16);
 
     public GameBoard() {
+        this.chess=DEFAULT_CHESS;
+        initialize();
+        this.chessComparator = chessComparator();
+    }
+
+    public GameBoard(int[][] chess){
+        this.chess=chess;
         initialize();
         this.chessComparator = chessComparator();
     }
@@ -154,6 +155,50 @@ public class GameBoard {
         chess[srcX][srcY] = 0;
     }
 
+    public Chess applyMove(Chess c, int dstX, int dstY) {
+        int srcX = c.getX();
+        int srcY = c.getY();
+
+        Chess willBeEaten = null;
+        // 记录被吃的棋子
+        if (this.hasChess(dstX, dstY)) {
+            willBeEaten = this.getChess(dstX, dstY);
+            chessHistory.push(willBeEaten);
+        }
+
+        // 更新棋盘
+        chess[dstX][dstY] = c.value();
+        chess[srcX][srcY] = 0;
+
+        // 更新棋子位置
+        c.setX(dstX);
+        c.setY(dstY);
+
+        return willBeEaten;
+    }
+
+    public void undoMove(Chess c, int srcX, int srcY) {
+        int dstX = c.getX();
+        int dstY = c.getY();
+
+        // 更新棋盘
+        chess[srcX][srcY] = c.value();
+        chess[dstX][dstY] = 0;
+
+        // 恢复被吃的棋子
+        if (!chessHistory.isEmpty()) {
+            Chess lastEaten = chessHistory.peek();
+            if (lastEaten.getX() == dstX && lastEaten.getY() == dstY) {
+                chessHistory.pop();
+                chess[dstX][dstY] = lastEaten.value();
+            }
+        }
+
+        // 更新棋子位置
+        c.setX(srcX);
+        c.setY(srcY);
+    }
+
     public void recoverChess(Chess c) {
         if (c == null) return;
         chess[c.getX()][c.getY()] = c.value();
@@ -166,6 +211,12 @@ public class GameBoard {
                 if (hasChess(i, j)) {
                     Chess chess = getChess(i, j);
                     score += this.chess[i][j];
+                    // 前进奖励
+                    if (chess.isMaximizer()) {
+                        score += (BOARD_HEIGHT - i - 1) * (chess.value() / 10);
+                    } else {
+                        score += i * (chess.value() / 10);
+                    }
                     if (chess.getChessType().equals(ChessType.RAT)) {
                         // 控制河流
                         if (isRiver(i, j)) {
@@ -178,12 +229,12 @@ public class GameBoard {
                     }
                     // 优先攻占敌方洞穴
                     if (isCave(i, j)) {
-                        score += chess.isMaximizer() ? 1000 : -1000;
+                        score += chess.isMaximizer() ? 2000 : -2000;
                     }
-                    // 优先占领我方陷阱位置
-                    if (isTrap(i, j)) {
-                        score += chess.isMaximizer() ? 50 : -50;
-                    }
+//                    // 优先占领我方陷阱位置
+//                    if (isTrap(i, j)) {
+//                        score += chess.isMaximizer() ? 50 : -50;
+//                    }
                 }
             }
         }
@@ -233,7 +284,7 @@ public class GameBoard {
         System.out.println("--------------------------------------------");
     }
 
-    public void selectSide(){
+    public void selectSide() {
         Scanner scanner = new Scanner(System.in);
         System.out.println("1:红方");
         System.out.println("2:蓝方");
@@ -293,33 +344,60 @@ public class GameBoard {
             System.out.println("请选择正确的方向");
             return;
         }
-        chess.move(pointMap.get(directions.get(direction - 1))[0], pointMap.get(directions.get(direction - 1))[1]);
+        applyMove(chess, pointMap.get(directions.get(direction - 1))[0], pointMap.get(directions.get(direction - 1))[1]);
         isMyTurn = false;
     }
 
     private void initialize() {
-        final List<Chess> chessList = new ArrayList<>(16);
+        for (int i = 0; i < BOARD_HEIGHT; i++) {
+            for (int j = 0; j < BOARD_WIDTH; j++) {
+                Chess c = switch (chess[i][j]) {
+                    case 100 -> new Rat(i, j, true);
+                    case 200 -> new Cat(i, j, true);
+                    case 300 -> new Dog(i, j, true);
+                    case 400 -> new Wolf(i, j, true);
+                    case 500 -> new Leopard(i, j, true);
+                    case 600 -> new Tiger(i, j, true);
+                    case 700 -> new Lion(i, j, true);
+                    case 800 -> new Elephant(i, j, true);
+                    case -100 -> new Rat(i, j, false);
+                    case -200 -> new Cat(i, j, false);
+                    case -300 -> new Dog(i, j, false);
+                    case -400 -> new Wolf(i, j, false);
+                    case -500 -> new Leopard(i, j, false);
+                    case -600 -> new Tiger(i, j, false);
+                    case -700 -> new Lion(i, j, false);
+                    case -800 -> new Elephant(i, j, false);
+                    default -> null;
+                };
+                if (c != null) {
+                    chessMap.put(c.value(), c);
+                }
+            }
+        }
 
-        // 红方棋子
-        chessList.add(new Lion(0, 0, false));
-        chessList.add(new Rat(2, 0, false));
-        chessList.add(new Dog(1, 1, false));
-        chessList.add(new Leopard(2, 2, false));
-        chessList.add(new Wolf(2, 4, false));
-        chessList.add(new Cat(1, 5, false));
-        chessList.add(new Tiger(0, 6, false));
-        chessList.add(new Elephant(2, 6, false));
-        // 蓝方棋子
-        chessList.add(new Lion(8, 6, true));
-        chessList.add(new Rat(6, 6, true));
-        chessList.add(new Dog(7, 5, true));
-        chessList.add(new Leopard(6, 4, true));
-        chessList.add(new Wolf(6, 2, true));
-        chessList.add(new Cat(7, 1, true));
-        chessList.add(new Tiger(8, 0, true));
-        chessList.add(new Elephant(6, 0, true));
+        Random random = new Random(0xDEADBEEF);
+        for (int i = 0; i < BOARD_HEIGHT; i++) {
+            for (int j = 0; j < BOARD_WIDTH; j++) {
+                for (int k = 0; k < 16; k++) {
+                    zobristTable[i][j][k] = random.nextLong();
+                }
+            }
+        }
 
-        chessList.forEach(chess -> chessMap.put(chess.value(), chess));
+        playerHash = random.nextLong();
+
+        GameContext.setGameBoard(this);
+    }
+
+    public long computeHash() {
+        long hash = 0;
+        for (int i = 0; i < BOARD_HEIGHT; i++) {
+            for (int j = 0; j < BOARD_WIDTH; j++) {
+                hash ^= zobristTable[i][j][chess[i][j]];
+            }
+        }
+        return isMyTurn ? hash : hash ^ playerHash;
     }
 
     private Comparator<Chess> chessComparator() {
