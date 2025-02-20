@@ -40,11 +40,15 @@ public class BeastChessAI {
                         for (int[] move : moves) {
                             // 执行移动
                             Chess willBeEaten = gameBoard.applyMove(chess, move[0], move[1]);
+
+                            // 如果长捉，撤销移动
+                            if (gameBoard.detectRepetition()) {
+                                gameBoard.undoMove(chess, originalX, originalY, willBeEaten);
+                                break;
+                            }
                             int value = minimax(depth - 1, alpha, beta, false);
                             // 撤销移动 并恢复被吃的棋子
-//                            gameBoard.undoMove(chess, originalX, originalY);
-                            gameBoard.applyMove(chess, originalX, originalY);
-                            gameBoard.recoverChess(willBeEaten);
+                            gameBoard.undoMove(chess, originalX, originalY, willBeEaten);
                             max = Math.max(max, value);
                             alpha = Math.max(alpha, value);
                             if (alpha >= beta) {
@@ -69,9 +73,7 @@ public class BeastChessAI {
                             Chess willBeEaten = gameBoard.applyMove(chess, move[0], move[1]);
                             int value = minimax(depth - 1, alpha, beta, true);
                             // 撤销移动 并恢复被吃的棋子
-//                            gameBoard.undoMove(chess, originalX, originalY);
-                            gameBoard.applyMove(chess, originalX, originalY);
-                            gameBoard.recoverChess(willBeEaten);
+                            gameBoard.undoMove(chess, originalX, originalY, willBeEaten);
                             min = Math.min(min, value);
                             beta = Math.min(beta, value);
                             if (alpha >= beta) {
@@ -100,7 +102,6 @@ public class BeastChessAI {
                     int[][] moves = chess.nextAvailableMoves();
                     for (int[] move : moves) {
                         // 执行移动
-//                        gameBoard.applyMove(chess, move[0], move[1]);
                         Chess willBeEaten = gameBoard.applyMove(chess, move[0], move[1]);
                         int value = minimax(MAX_DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, !maximizer);
                         if (maximizer && value > max) {
@@ -115,9 +116,7 @@ public class BeastChessAI {
                             bestChess = chess;
                         }
                         // 撤销移动 并恢复被吃的棋子
-//                        gameBoard.undoMove(chess, originalX, originalY);
-                        gameBoard.applyMove(chess, originalX, originalY);
-                        gameBoard.recoverChess(willBeEaten);
+                        gameBoard.undoMove(chess, originalX, originalY, willBeEaten);
                     }
 
                 }
@@ -129,15 +128,5 @@ public class BeastChessAI {
             System.out.println("AI移动：" + bestChess.getChessType().getName() + "->" + "(" + bestPoint[0] + "," + bestPoint[1] + ")");
         }
         System.out.println("AI计算次数：" + count);
-    }
-
-    private static boolean isRepetitive(List<int[]> moves) {
-        if (moves.size() < 6) {
-            return false;
-        }
-        int size = moves.size();
-        return moves.get(size - 1)[0] == moves.get(size - 3)[0] && moves.get(size - 1)[1] == moves.get(size - 3)[1] &&
-                moves.get(size - 2)[0] == moves.get(size - 4)[0] && moves.get(size - 2)[1] == moves.get(size - 4)[1] &&
-                moves.get(size - 3)[0] == moves.get(size - 5)[0] && moves.get(size - 3)[1] == moves.get(size - 5)[1];
     }
 }

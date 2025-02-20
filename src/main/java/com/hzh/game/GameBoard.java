@@ -13,13 +13,13 @@ public class GameBoard {
     public static boolean isMaximizer = true;
     public static final int BOARD_WIDTH = 7;
     public static final int BOARD_HEIGHT = 9;
-    private final long[][][] zobristTable = new long[BOARD_HEIGHT][BOARD_WIDTH][16];
+    private final long[][][] zobristTable = new long[BOARD_HEIGHT][BOARD_WIDTH][17];
     private long playerHash;
+    private long currentHash;
+    private Chess repetitionChess;
+    private final List<Long> hashHistory = new ArrayList<>();
 
-    private final Deque<Long> hashHistory = new ArrayDeque<>();
-    private final Deque<Chess> chessHistory = new ArrayDeque<>();
-
-    private final int[][] DEFAULT_CHESS={
+    private final int[][] DEFAULT_CHESS = {
             {-700, 0, 0, 0, 0, 0, -600},
             {0, -300, 0, 0, 0, -200, 0},
             {-100, 0, -500, 0, -400, 0, -800},
@@ -31,7 +31,7 @@ public class GameBoard {
             {600, 0, 0, 0, 0, 0, 700}
     };
 
-    private int[][] chess;
+    private final int[][] chess;
 
     private final int[][] river = {
             {0, 0, 0, 0, 0, 0, 0},
@@ -72,13 +72,13 @@ public class GameBoard {
     public final Map<Integer, Chess> chessMap = new HashMap<>(16);
 
     public GameBoard() {
-        this.chess=DEFAULT_CHESS;
+        this.chess = DEFAULT_CHESS;
         initialize();
         this.chessComparator = chessComparator();
     }
 
-    public GameBoard(int[][] chess){
-        this.chess=chess;
+    public GameBoard(int[][] chess) {
+        this.chess = chess;
         initialize();
         this.chessComparator = chessComparator();
     }
@@ -163,7 +163,6 @@ public class GameBoard {
         // 记录被吃的棋子
         if (this.hasChess(dstX, dstY)) {
             willBeEaten = this.getChess(dstX, dstY);
-            chessHistory.push(willBeEaten);
         }
 
         // 更新棋盘
@@ -174,34 +173,46 @@ public class GameBoard {
         c.setX(dstX);
         c.setY(dstY);
 
+        // 移动后记录棋局状态
+        currentHash ^= zobristTable[srcX][srcY][convertValue(c.value())];
+        currentHash ^= zobristTable[dstX][dstY][convertValue(c.value())];
+        hashHistory.add(currentHash);
+
         return willBeEaten;
     }
 
-    public void undoMove(Chess c, int srcX, int srcY) {
+    public void undoMove(Chess c, int srcX, int srcY, Chess isEaten) {
         int dstX = c.getX();
         int dstY = c.getY();
+
+        // 恢复棋局状态
+        currentHash ^= zobristTable[dstX][dstY][convertValue(c.value())];
+        currentHash ^= zobristTable[srcX][srcY][convertValue(c.value())];
+        hashHistory.remove(hashHistory.size() - 1);
 
         // 更新棋盘
         chess[srcX][srcY] = c.value();
         chess[dstX][dstY] = 0;
 
-        // 恢复被吃的棋子
-        if (!chessHistory.isEmpty()) {
-            Chess lastEaten = chessHistory.peek();
-            if (lastEaten.getX() == dstX && lastEaten.getY() == dstY) {
-                chessHistory.pop();
-                chess[dstX][dstY] = lastEaten.value();
-            }
-        }
-
         // 更新棋子位置
         c.setX(srcX);
         c.setY(srcY);
+
+        // 恢复被吃的棋子
+        if (isEaten == null) return;
+        chess[isEaten.getX()][isEaten.getY()] = isEaten.value();
     }
 
-    public void recoverChess(Chess c) {
-        if (c == null) return;
-        chess[c.getX()][c.getY()] = c.value();
+    // 长捉检测，
+    public boolean detectRepetition() {
+        int size = hashHistory.size();
+        if (size < 8) {
+            return false;
+        }
+        return  hashHistory.get(size - 1).equals(hashHistory.get(size - 5)) &&
+                hashHistory.get(size - 2).equals(hashHistory.get(size - 6)) &&
+                hashHistory.get(size - 3).equals(hashHistory.get(size - 7)) &&
+                hashHistory.get(size - 4).equals(hashHistory.get(size - 8));
     }
 
     public int evaluate() {
@@ -314,6 +325,9 @@ public class GameBoard {
         if (chessDied(chess)) {
             System.out.println("该棋子已被吃掉");
             return;
+        }else if(chess==repetitionChess){
+            System.out.println("禁止长捉");
+            return;
         }
 
         int[][] moves = chess.nextAvailableMoves();
@@ -344,7 +358,11 @@ public class GameBoard {
             System.out.println("请选择正确的方向");
             return;
         }
+        repetitionChess=null;
         applyMove(chess, pointMap.get(directions.get(direction - 1))[0], pointMap.get(directions.get(direction - 1))[1]);
+        if(detectRepetition()){
+            repetitionChess=chess;
+        }
         isMyTurn = false;
     }
 
@@ -387,17 +405,43 @@ public class GameBoard {
 
         playerHash = random.nextLong();
 
+        currentHash = computeHash(isMaximizer);
+
+        hashHistory.add(currentHash);
+
         GameContext.setGameBoard(this);
     }
 
-    public long computeHash() {
+    private long computeHash(boolean isMaximizer) {
         long hash = 0;
         for (int i = 0; i < BOARD_HEIGHT; i++) {
             for (int j = 0; j < BOARD_WIDTH; j++) {
-                hash ^= zobristTable[i][j][chess[i][j]];
+                hash ^= zobristTable[i][j][convertValue(chess[i][j])];
             }
         }
-        return isMyTurn ? hash : hash ^ playerHash;
+        return isMaximizer ? hash : hash ^ playerHash;
+    }
+
+    private int convertValue(int value) {
+        return switch (value) {
+            case 100 -> 1;
+            case 200 -> 2;
+            case 300 -> 3;
+            case 400 -> 4;
+            case 500 -> 5;
+            case 600 -> 6;
+            case 700 -> 7;
+            case 800 -> 8;
+            case -100 -> 9;
+            case -200 -> 10;
+            case -300 -> 11;
+            case -400 -> 12;
+            case -500 -> 13;
+            case -600 -> 14;
+            case -700 -> 15;
+            case -800 -> 16;
+            default -> 0;
+        };
     }
 
     private Comparator<Chess> chessComparator() {
